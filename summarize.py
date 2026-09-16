@@ -7,7 +7,7 @@ HF_TOKEN = os.environ.get("HF_TOKEN")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-# Văn bản tin tức mẫu (bạn có thể thay đổi hoặc mở rộng sau)
+# Văn bản tin tức mẫu
 article_text = """
 The Eiffel Tower is a wrought-iron lattice tower on the Champ de Mars in Paris, France. 
 It is named after the engineer Gustave Eiffel, whose company designed and built the tower. 
@@ -16,8 +16,8 @@ The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey b
 Its base is square, measuring 125 metres on each side. During its construction, it surpassed the Washington Monument to become the tallest man-made structure in the world, a title it held for 41 years.
 """
 
-# Khởi tạo mô hình AI của bạn
-client = InferenceClient(model="Sachin21112004/distilbart-news-summarizer", token=HF_TOKEN)
+# Sử dụng mô hình hỗ trợ text-generation tốt (Qwen 2.5 Instruct)
+client = InferenceClient(model="Qwen/Qwen2.5-7B-Instruct", token=HF_TOKEN)
 
 # Prompt định dạng theo đúng chuẩn Worksheet yêu cầu
 prompt = f"""
@@ -54,7 +54,7 @@ GLOBAL AWARENESS:
 """
 
 print("Đang tạo Worksheet bằng AI...")
-response = client.text_generation(prompt, max_new_tokens=400)
+response = client.text_generation(prompt, max_new_tokens=600)
 worksheet_result = response.strip()
 
 print("Kết quả Worksheet:\n", worksheet_result)
