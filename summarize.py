@@ -16,7 +16,7 @@ The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey b
 Its base is square, measuring 125 metres on each side. During its construction, it surpassed the Washington Monument to become the tallest man-made structure in the world, a title it held for 41 years.
 """
 
-# Sử dụng mô hình hỗ trợ text-generation tốt (Qwen 2.5 Instruct)
+# Khởi tạo InferenceClient
 client = InferenceClient(model="Qwen/Qwen2.5-7B-Instruct", token=HF_TOKEN)
 
 # Prompt định dạng theo đúng chuẩn Worksheet yêu cầu
@@ -54,8 +54,13 @@ GLOBAL AWARENESS:
 """
 
 print("Đang tạo Worksheet bằng AI...")
-response = client.text_generation(prompt, max_new_tokens=600)
-worksheet_result = response.strip()
+
+# Dùng chat_completion cho các mô hình Instruct/Chat
+response = client.chat_completion(
+    messages=[{"role": "user", "content": prompt}],
+    max_tokens=600
+)
+worksheet_result = response.choices[0].message.content.strip()
 
 print("Kết quả Worksheet:\n", worksheet_result)
 
