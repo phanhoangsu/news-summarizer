@@ -1,11 +1,11 @@
 import os
 import requests
-from huggingface_hub import InferenceClient
+from google import genai
 
-# Lấy các Secret từ GitHub Actions
-HF_TOKEN = os.environ.get("HF_TOKEN")
+# Lấy các Secret
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # Văn bản tin tức mẫu
 article_text = """
@@ -15,9 +15,6 @@ Constructed from 1889 to 1889 as the entrance to the 1889 World's Fair, it was i
 The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey building. 
 Its base is square, measuring 125 metres on each side. During its construction, it surpassed the Washington Monument to become the tallest man-made structure in the world, a title it held for 41 years.
 """
-
-# Khởi tạo InferenceClient
-client = InferenceClient(model="Qwen/Qwen2.5-7B-Instruct", token=HF_TOKEN)
 
 # Prompt định dạng theo đúng chuẩn Worksheet yêu cầu
 prompt = f"""
@@ -53,14 +50,13 @@ GLOBAL AWARENESS:
 ...
 """
 
-print("Đang tạo Worksheet bằng AI...")
-
-# Dùng chat_completion cho các mô hình Instruct/Chat
-response = client.chat_completion(
-    messages=[{"role": "user", "content": prompt}],
-    max_tokens=600
+print("Đang tạo Worksheet bằng Gemini AI...")
+client = genai.Client(api_key=GEMINI_API_KEY)
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
 )
-worksheet_result = response.choices[0].message.content.strip()
+worksheet_result = response.text.strip()
 
 print("Kết quả Worksheet:\n", worksheet_result)
 
