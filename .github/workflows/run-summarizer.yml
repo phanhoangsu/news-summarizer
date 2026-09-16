@@ -2,8 +2,8 @@ name: Daily News Worksheet Automation
 
 on:
   schedule:
-    - cron: '0 23 * * *' # Chạy tự động mỗi ngày lúc 23:00 UTC (tương ứng 6:00 sáng giờ Việt Nam)
-  workflow_dispatch: # Cho phép bạn bấm nút test thủ công bất cứ lúc nào
+    - cron: '0 23 * * *'
+  workflow_dispatch:
 
 jobs:
   run-workflow:
@@ -20,11 +20,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests huggingface_hub
+          pip install requests google-genai
 
       - name: Run Summarizer Script
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
