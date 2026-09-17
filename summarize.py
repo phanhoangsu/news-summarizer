@@ -70,7 +70,7 @@ for item in topics:
     try:
         # Sử dụng model chuẩn và ổn định hỗ trợ Google Search Grounding
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3-flash-preview",
             contents=prompt,
             config=types.GenerateContentConfig(
                 tools=[{"google_search": {}}],
