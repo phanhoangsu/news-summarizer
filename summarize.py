@@ -68,9 +68,9 @@ for item in topics:
     """
 
     try:
-        # Gọi Gemini kết hợp công cụ tìm kiếm web thời gian thực (Google Search Grounding)
+        # Sử dụng model chuẩn và ổn định hỗ trợ Google Search Grounding
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 tools=[{"google_search": {}}],
@@ -79,7 +79,7 @@ for item in topics:
         )
         worksheet_result = response.text.strip()
         
-        # Đóng gói tin nhắn gửi về Telegram
+        # Đóng gói tin nhắn gửi về Telegram theo đúng định dạng block code của bạn
         message_text = f"🚀 *{category}* *(Real-time 1-2 days)*\n\n```text\n{worksheet_result}\n```"
         
         if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
@@ -97,9 +97,9 @@ for item in topics:
         else:
             print("Chưa cấu hình Telegram Token hoặc Chat ID.")
             
-        # Nghỉ 60 giây giữa các lần gọi để tránh chạm trần giới hạn API (Rate Limit / Lỗi 429)
-        print("Đang tạm nghỉ 60 giây trước khi chuyển sang chủ đề tiếp theo...")
-        time.sleep(60)
+        # Tăng thời gian nghỉ lên 90 giây để tránh chạm trần giới hạn API (Rate Limit / Lỗi 429) do prompt dài
+        print("Đang tạm nghỉ 90 giây trước khi chuyển sang chủ đề tiếp theo...")
+        time.sleep(90)
             
     except Exception as e:
         print(f"Lỗi khi xử lý chủ đề {category}: {str(e)}")
