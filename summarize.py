@@ -55,14 +55,21 @@ GLOBAL AWARENESS:
 
 try:
     # Sử dụng đúng model chuẩn hỗ trợ Google Search Grounding trên tài khoản của bạn
+    # response = client.models.generate_content(
+    #     model="gemini-3-flash-preview",
+    #     contents=prompt,
+    #     config=types.GenerateContentConfig(
+    #         tools=[{"google_search": {}}],
+    #         temperature=0.3,
+    #     )
+    # )
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            tools=[{"google_search": {}}],
-            temperature=0.3,
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+            )
         )
-    )
     
     worksheet_result = response.text.strip()
     
