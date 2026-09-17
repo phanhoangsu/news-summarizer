@@ -107,7 +107,6 @@
 
 
 
-
 import os
 import time
 import requests
@@ -122,102 +121,102 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# Danh sách nguồn RSS trực tiếp từ Reuters
 rss_topics = [
     {
         "category": "TECHNOLOGY 💻",
-        "url": "https://www.reutersagency.com/feed/?best-topics=tech&post_type=best"
+        "url": "https://news.google.com/rss/search?q=technology+artificial+intelligence+breaking+news&hl=en-US&gl=US&ceid=US:en"
     },
     {
         "category": "BUSINESS 📈",
-        "url": "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best"
+        "url": "https://news.google.com/rss/search?q=global+business+startup+breaking+news&hl=en-US&gl=US&ceid=US:en"
     },
     {
         "category": "STOCK MARKET 📊",
-        "url": "https://www.reutersagency.com/feed/?best-topics=markets&post_type=best"
+        "url": "https://news.google.com/rss/search?q=stock+market+wall+street+live+updates&hl=en-US&gl=US&ceid=US:en"
     }
 ]
 
-print("Đang lấy tin tức thời gian thực từ Reuters RSS...")
+print("Đang quét các bản tin nóng hổi mới nhất từ Google News RSS...")
 
-def fetch_news_from_rss(rss_url):
+def fetch_latest_news(rss_url):
     try:
-        # Thêm User-Agent để tránh bị Reuters chặn yêu cầu kết nối
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         response = requests.get(rss_url, headers=headers, timeout=10)
-        
         if response.status_code == 200:
             root = ET.fromstring(response.content)
-            items = root.findall('.//item')[:3] # Lấy 3 bài mới nhất từ Reuters
+            items = root.findall('.//item')[:5]
             news_texts = []
             for item in items:
                 title = item.find('title').text if item.find('title') is not None else ""
                 pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
-                description = item.find('description').text if item.find('description') is not None else ""
-                # Làm sạch thẻ HTML trong description nếu có
-                clean_desc = "".join(ET.fromstring(f"<root>{description}</root>").itertext()) if description else ""
-                news_texts.append(f"- Tiêu đề: {title}\n  Thời gian: {pub_date}\n  Tóm tắt: {clean_desc[:200]}...")
-            return "\n\n".join(news_texts)
+                news_texts.append(f"- Tiêu đề: {title} | Thời gian: {pub_date}")
+            return "\n".join(news_texts)
     except Exception as e:
-        print(f"Lỗi đọc RSS Reuters: {e}")
-    return "Không thể lấy dữ liệu từ Reuters."
+        print(f"Lỗi đọc RSS: {e}")
+    return "Không có dữ liệu tin tức."
 
 if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
     telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     
     for item in rss_topics:
         category = item["category"]
-        raw_news = fetch_news_from_rss(item["url"])
+        raw_news = fetch_latest_news(item["url"])
         
-        print(f"Đang xử lý chủ đề từ Reuters: {category}...")
+        print(f"Đang xử lý chủ đề: {category}...")
         
+        # Cập nhật prompt yêu cầu Gemini xuất ra đúng cấu trúc icon và tiêu đề mẫu bạn muốn
         prompt = f"""
-        You are a professional WORKSHEET FILLER. 
-        Based on the following recent news items from Reuters, choose the most prominent one and fill in the EXACT worksheet format. Keep answers concise, using keywords and facts only.
+        You are an elite REAL-TIME NEWS ANALYST. 
+        Below is a list of recent news headlines fetched right now. 
+        CRITICAL RULE: You MUST choose the absolute newest and most trending hot news published within the last 24 to 48 hours. DO NOT use old or outdated news.
 
-        Reuters News Data:
+        Raw News Feed:
         {raw_news}
 
-        Use this EXACT format:
-        TOPIC:
+        Based on the freshest news item found above, fill in the EXACT format below concisely using keywords and facts only:
+
+        📌 TOPIC: [Tên sự kiện nóng]
+        📍 Where: [Địa điểm / Quốc gia]
+        ⏰ When: [Thời gian mới nhất trong 1-2 ngày]
+        👤 Who: [Nhân vật / Công ty liên quan]
+
+        🔴 WHAT (Vấn đề):
         ...
-        Where:
+        ⚡ HOW (Cách giải quyết / Diễn biến):
         ...
-        When:
+        💡 WHY (Nguyên nhân / Ý nghĩa):
         ...
-        Who:
+
+        📝 SUMMARY:
         ...
-        WHAT (PROBLEM):
-        ...
-        HOW:
-        ...
-        WHY:
-        ...
-        SUMMARY:
-        ...
-        ANALYZING:
-        1. How this event impacts my life:
-        ...
-        2. What I should do after reading this news:
-        ...
-        WHY DID YOU CHOOSE THIS NEWS?
-        ...
-        GLOBAL AWARENESS:
-        ...
+
+        📊 ANALYZING:
+        1️⃣ Tác động đến tôi: ...
+        2️⃣ Hành động nên làm: ...
+
+        🎯 LÝ DO CHỌN TIN: ...
+        🌐 GLOBAL AWARENESS: ...
         """
         
         try:
-            # Gọi Gemini xử lý văn bản thuần túy, không dùng tool search nên hoàn toàn mượt mà, không dính lỗi 429
             response = client.models.generate_content(
                 model="gemini-3-flash-preview",
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.3,
+                    temperature=0.2,
                 )
             )
             
             worksheet_result = response.text.strip()
-            message_text = f"🚀 *{category}* *(Nguồn: Reuters)*\n\n```text\n{worksheet_result}\n```"
+            
+            # Gói kết quả vào block code chuẩn template bạn yêu cầu gửi về Telegram
+            message_text = (
+                f"🔥 *HOT NEWS - {category}* 🔥\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"```text\n{worksheet_result}\n```\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"✨ _Được tổng hợp tự động bởi AI System_"
+            )
             
             payload = {
                 "chat_id": TELEGRAM_CHAT_ID,
@@ -227,20 +226,18 @@ if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
             
             res = requests.post(telegram_url, json=payload)
             if res.status_code == 200:
-                print(f"Đã gửi thành công bản tin Reuters chủ đề {category} về Telegram!")
+                print(f"Đã gửi thành công bản tin {category} về Telegram!")
             else:
                 print(f"Lỗi gửi Telegram chủ đề {category}:", res.text)
                 
-            # Nghỉ 5 giây giữa các tin nhắn
             time.sleep(5)
             
         except Exception as e:
             print(f"Lỗi xử lý Gemini cho chủ đề {category}: {str(e)}")
             
-    print("Hoàn tất toàn bộ quy trình gửi bản tin Reuters!")
+    print("Hoàn tất toàn bộ quy trình gửi hot news!")
 else:
     print("Chưa cấu hình Telegram Token hoặc Chat ID.")
-
 
 
 
