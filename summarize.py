@@ -105,8 +105,6 @@
 # print("Hoàn tất toàn bộ quy trình gửi bản tin điểm tin!")
 
 
-
-
 import os
 import time
 import requests
@@ -149,11 +147,11 @@ def fetch_latest_news(rss_url):
             for item in items:
                 title = item.find('title').text if item.find('title') is not None else ""
                 pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
-                news_texts.append(f"- Tiêu đề: {title} | Thời gian: {pub_date}")
+                news_texts.append(f"- Title: {title} | Date: {pub_date}")
             return "\n".join(news_texts)
     except Exception as e:
         print(f"Lỗi đọc RSS: {e}")
-    return "Không có dữ liệu tin tức."
+    return "No news data available."
 
 if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
     telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -164,37 +162,39 @@ if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
         
         print(f"Đang xử lý chủ đề: {category}...")
         
-        # Cập nhật prompt yêu cầu Gemini xuất ra đúng cấu trúc icon và tiêu đề mẫu bạn muốn
+        # Thêm chỉ thị bắt buộc viết hoàn toàn bằng tiếng Anh (English)
         prompt = f"""
         You are an elite REAL-TIME NEWS ANALYST. 
         Below is a list of recent news headlines fetched right now. 
-        CRITICAL RULE: You MUST choose the absolute newest and most trending hot news published within the last 24 to 48 hours. DO NOT use old or outdated news.
+        CRITICAL RULES: 
+        1. You MUST choose the absolute newest and most trending hot news published within the last 24 to 48 hours. DO NOT use old or outdated news.
+        2. You MUST write the ENTIRE output strictly in professional ENGLISH.
 
         Raw News Feed:
         {raw_news}
 
         Based on the freshest news item found above, fill in the EXACT format below concisely using keywords and facts only:
 
-        📌 TOPIC: [Tên sự kiện nóng]
-        📍 Where: [Địa điểm / Quốc gia]
-        ⏰ When: [Thời gian mới nhất trong 1-2 ngày]
-        👤 Who: [Nhân vật / Công ty liên quan]
+        📌 TOPIC: [Hot event title]
+        📍 Where: [Location / Country]
+        ⏰ When: [Latest timestamp within 1-2 days]
+        👤 Who: [Key figures / Companies involved]
 
-        🔴 WHAT (Vấn đề):
+        🔴 WHAT (PROBLEM):
         ...
-        ⚡ HOW (Cách giải quyết / Diễn biến):
+        ⚡ HOW (Resolution / Development):
         ...
-        💡 WHY (Nguyên nhân / Ý nghĩa):
+        💡 WHY (Root cause / Significance):
         ...
 
         📝 SUMMARY:
         ...
 
         📊 ANALYZING:
-        1️⃣ Tác động đến tôi: ...
-        2️⃣ Hành động nên làm: ...
+        1️⃣ Impact on my life: ...
+        2️⃣ What I should do: ...
 
-        🎯 LÝ DO CHỌN TIN: ...
+        🎯 WHY DID YOU CHOOSE THIS NEWS?: ...
         🌐 GLOBAL AWARENESS: ...
         """
         
@@ -209,13 +209,13 @@ if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
             
             worksheet_result = response.text.strip()
             
-            # Gói kết quả vào block code chuẩn template bạn yêu cầu gửi về Telegram
+            # Gói kết quả vào block code chuẩn template gửi về Telegram
             message_text = (
                 f"🔥 *HOT NEWS - {category}* 🔥\n"
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"```text\n{worksheet_result}\n```\n"
                 f"━━━━━━━━━━━━━━━━━━━\n"
-                f"✨ _Được tổng hợp tự động bởi AI System_"
+                f"✨ _Automated by AI System_"
             )
             
             payload = {
@@ -226,7 +226,7 @@ if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
             
             res = requests.post(telegram_url, json=payload)
             if res.status_code == 200:
-                print(f"Đã gửi thành công bản tin {category} về Telegram!")
+                print(f"Đã gửi thành công bản tin {category} bằng tiếng Anh về Telegram!")
             else:
                 print(f"Lỗi gửi Telegram chủ đề {category}:", res.text)
                 
