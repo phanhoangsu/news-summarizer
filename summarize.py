@@ -105,6 +105,9 @@
 # print("Hoàn tất toàn bộ quy trình gửi bản tin điểm tin!")
 
 
+
+
+
 import os
 import time
 import requests
@@ -143,38 +146,49 @@ def fetch_latest_news(rss_url):
         if response.status_code == 200:
             root = ET.fromstring(response.content)
             items = root.findall('.//item')[:5]
-            news_texts = []
+            news_list = []
             for item in items:
                 title = item.find('title').text if item.find('title') is not None else ""
                 pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
-                news_texts.append(f"- Title: {title} | Date: {pub_date}")
-            return "\n".join(news_texts)
+                link = item.find('link').text if item.find('link') is not None else ""
+                # Lưu lại thông tin gồm cả tiêu đề, ngày tháng và link gốc
+                news_list.append({"title": title, "pubDate": pub_date, "link": link})
+            return news_list
     except Exception as e:
         print(f"Lỗi đọc RSS: {e}")
-    return "No news data available."
+    return []
 
 if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
     telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     
     for item in rss_topics:
         category = item["category"]
-        raw_news = fetch_latest_news(item["url"])
+        news_items = fetch_latest_news(item["url"])
+        
+        if not news_items:
+            print(f"Không có dữ liệu tin tức cho {category}.")
+            continue
+            
+        # Tạo danh sách các tiêu đề kèm số thứ tự để đưa vào Prompt cho Gemini chọn
+        raw_news_text = ""
+        for idx, n in enumerate(news_items):
+            raw_news_text += f"[{idx+1}] Title: {n['title']} | Date: {n['pubDate']}\n"
         
         print(f"Đang xử lý chủ đề: {category}...")
         
-        # Thêm chỉ thị bắt buộc viết hoàn toàn bằng tiếng Anh (English)
         prompt = f"""
         You are an elite REAL-TIME NEWS ANALYST. 
-        Below is a list of recent news headlines fetched right now. 
+        Below is a numbered list of recent news headlines fetched right now. 
         CRITICAL RULES: 
         1. You MUST choose the absolute newest and most trending hot news published within the last 24 to 48 hours. DO NOT use old or outdated news.
         2. You MUST write the ENTIRE output strictly in professional ENGLISH.
 
         Raw News Feed:
-        {raw_news}
+        {raw_news_text}
 
-        Based on the freshest news item found above, fill in the EXACT format below concisely using keywords and facts only:
+        Based on the freshest news item found above, you MUST follow this EXACT output format:
 
+        SELECTED_INDEX: [Chỉ điền số thứ tự từ 1 đến 5 của bài báo bạn chọn ở trên, ví dụ: 1]
         📌 TOPIC: [Hot event title]
         📍 Where: [Location / Country]
         ⏰ When: [Latest timestamp within 1-2 days]
@@ -207,13 +221,32 @@ if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
                 )
             )
             
-            worksheet_result = response.text.strip()
+            response_text = response.text.strip()
             
-            # Gói kết quả vào block code chuẩn template gửi về Telegram
+            # Xử lý tách phần chỉ số được chọn và nội dung hiển thị
+            selected_link = "https://news.google.com"
+            worksheet_result = response_text
+            
+            if "SELECTED_INDEX:" in response_text:
+                parts = response_text.split("SELECTED_INDEX:")
+                if len(parts) > 1:
+                    index_part = parts[1].strip().split("\n")[0].strip()
+                    # Lọc lấy ký tự số
+                    digits = "".join([c for c in index_part if c.isdigit()])
+                    if digits:
+                        chosen_idx = int(digits) - 1
+                        if 0 <= chosen_idx < len(news_items):
+                            selected_link = news_items[chosen_idx]["link"]
+                    
+                    # Loại bỏ dòng SELECTED_INDEX ra khỏi nội dung gửi về Telegram để giao diện không bị thừa
+                    worksheet_result = "\n".join(response_text.split("\n")[1:]).strip()
+
+            # Gói kết quả vào block code chuẩn template kèm đúng link gốc của bài báo đó
             message_text = (
                 f"🔥 *HOT NEWS - {category}* 🔥\n"
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"```text\n{worksheet_result}\n```\n"
+                f"🔗 *Source Link:* [Click here to read original article]({selected_link})\n"
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"✨ _Automated by AI System_"
             )
@@ -221,12 +254,13 @@ if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
             payload = {
                 "chat_id": TELEGRAM_CHAT_ID,
                 "text": message_text,
-                "parse_mode": "Markdown"
+                "parse_mode": "Markdown",
+                "disable_web_page_preview": False
             }
             
             res = requests.post(telegram_url, json=payload)
             if res.status_code == 200:
-                print(f"Đã gửi thành công bản tin {category} bằng tiếng Anh về Telegram!")
+                print(f"Đã gửi thành công bản tin {category} kèm đúng link bài báo về Telegram!")
             else:
                 print(f"Lỗi gửi Telegram chủ đề {category}:", res.text)
                 
@@ -238,7 +272,3 @@ if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
     print("Hoàn tất toàn bộ quy trình gửi hot news!")
 else:
     print("Chưa cấu hình Telegram Token hoặc Chat ID.")
-
-
-
-
