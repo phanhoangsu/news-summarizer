@@ -60,7 +60,7 @@ try:
         model="gemini-3-flash-preview",
         contents=prompt,
         config=types.GenerateContentConfig(
-            # tools=[{"google_search": {}}],
+            tools=[{"google_search": {}}],
             temperature=0.3,
         )
     )
