@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from google import genai
 from google.genai import types
@@ -12,7 +13,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 print("Đang bắt đầu quá trình tìm kiếm và tổng hợp 3 bản tin thời gian thực...")
 
-# Gộp yêu cầu 3 chủ đề vào 1 prompt duy nhất để chỉ gọi API 1 lần (tránh lỗi 429 Rate Limit)
+# Gộp yêu cầu 3 chủ đề vào 1 prompt duy nhất để chỉ gọi API 1 lần
 prompt = """
 You are a professional REAL-TIME NEWS RESEARCHER and WORKSHEET FILLER. 
 Search for and use REAL, RECENT news published within the last 1-2 days regarding these 3 topics:
@@ -23,7 +24,7 @@ Search for and use REAL, RECENT news published within the last 1-2 days regardin
 Do not use old or outdated events. Base your information strictly on the latest search results.
 For EACH of the 3 topics above, fill in the EXACT worksheet format provided below. Keep answers concise, using keywords and facts only.
 
-Use this EXACT format for each topic:
+Use this EXACT format for each topic (bắt buộc phải giữ đúng định dạng phân tách này):
 
 === TOPIC: [Tên chủ đề] ===
 TOPIC:
@@ -54,40 +55,47 @@ GLOBAL AWARENESS:
 """
 
 try:
-    # Sử dụng đúng model chuẩn hỗ trợ Google Search Grounding trên tài khoản của bạn
-    # response = client.models.generate_content(
-    #     model="gemini-3-flash-preview",
-    #     contents=prompt,
-    #     config=types.GenerateContentConfig(
-    #         tools=[{"google_search": {}}],
-    #         temperature=0.3,
-    #     )
-    # )
+    # Gọi API 1 lần duy nhất có kèm theo Google Search Grounding
     response = client.models.generate_content(
-            model="gemini-3-flash-preview",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.3,
-            )
+        model="gemini-3-flash-preview",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            # tools=[{"google_search": {}}],
+            temperature=0.3,
         )
+    )
     
     worksheet_result = response.text.strip()
     
-    # Đóng gói toàn bộ bản tin gửi về Telegram dưới dạng Markdown code block
-    message_text = f"🚀 *BẢN TIN ĐIỂM TIN HÀNG NGÀY* *(Real-time 1-2 days)*\n\n```text\n{worksheet_result}\n```"
-
+    # Tách kết quả thành các phần riêng biệt dựa trên thẻ phân tách "=== TOPIC:"
+    parts = worksheet_result.split("=== TOPIC:")
+    
     if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
         telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": message_text,
-            "parse_mode": "Markdown"
-        }
-        res = requests.post(telegram_url, json=payload)
-        if res.status_code == 200:
-            print("Đã gửi thành công toàn bộ bản tin điểm tin về Telegram!")
-        else:
-            print("Lỗi gửi Telegram:", res.text)
+        
+        for part in parts:
+            if not part.strip():
+                continue
+            
+            sub_content = "=== TOPIC:" + part.strip()
+            message_text = f"🚀 *BẢN TIN ĐIỂM TIN HÀNG NGÀY*\n\n```text\n{sub_content}\n```"
+            
+            payload = {
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": message_text,
+                "parse_mode": "Markdown"
+            }
+            
+            res = requests.post(telegram_url, json=payload)
+            if res.status_code == 200:
+                print("Đã gửi thành công một phần bản tin về Telegram!")
+            else:
+                print("Lỗi gửi Telegram:", res.text)
+                
+            # Nghỉ 3 giây giữa các tin nhắn để tránh bị Telegram tính là spam
+            time.sleep(3)
+            
+        print("Đã gửi thành công toàn bộ các phần bản tin về Telegram!")
     else:
         print("Chưa cấu hình Telegram Token hoặc Chat ID.")
 
